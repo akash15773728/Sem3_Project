@@ -1,0 +1,202 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Header } from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { apiRequest } from '../services/api';
+import type { LevelDashboardResponse } from '../types';
+import {
+  Layers,
+  MapPin,
+  TrendingUp,
+  ShieldAlert,
+  ArrowRight,
+  Calendar,
+  Building2
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid
+} from 'recharts';
+
+export const StateAnalysisPage: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [levelData, setLevelData] = useState<LevelDashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(90);
+
+  const fetchNationalStateData = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set('level', 'National');
+      params.set('days', String(days));
+
+      const data = await apiRequest<LevelDashboardResponse>(`/analytics/dashboard-level?${params.toString()}`);
+      setLevelData(data);
+    } catch (err) {
+      console.error('Failed to load state analysis:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNationalStateData();
+  }, [days]);
+
+  const stateBreakdown = levelData?.regional_breakdown || [];
+
+  return (
+    <div>
+      <Header
+        title="Inter-State Healthcare Referral Distribution"
+        subtitle="National overview analyzing referral flows and service gaps across States and Union Territories"
+      />
+
+      <main className="p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Banner */}
+        <div className="card-healthcare p-5 bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider bg-teal-50 px-2 py-0.5 rounded">
+                National Healthcare Overview
+              </span>
+              <span className="text-xs text-slate-500">
+                Jurisdiction: <strong>Republic of India</strong>
+              </span>
+            </div>
+            <h2 className="text-base font-bold text-slate-900">
+              Cross-State Referral Influx & Gap Identification
+            </h2>
+            <p className="text-xs text-slate-600 max-w-2xl">
+              Understand how patient transfers move across states when advanced tertiary care or specialized equipment is concentrated in specific urban hubs.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs">
+            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+            <select
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+              className="bg-transparent font-bold text-slate-700 focus:outline-none"
+            >
+              <option value={30}>Last 30 Days</option>
+              <option value={90}>Last 90 Days</option>
+              <option value={180}>Last 180 Days</option>
+              <option value={365}>Last 365 Days</option>
+            </select>
+          </div>
+        </div>
+
+        {/* State Referral Bar Chart */}
+        <div className="card-healthcare p-6 bg-white space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="font-bold text-slate-900 text-sm">
+                State-Wise Referral Distribution & Deficit Patterns
+              </h3>
+              <p className="text-xs text-slate-500">
+                Comparative referral volume and flagged potential gaps by State/UT
+              </p>
+            </div>
+          </div>
+
+          <div className="h-72">
+            {stateBreakdown.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stateBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                  <XAxis dataKey="name" stroke="#94A3B8" fontSize={11} />
+                  <YAxis stroke="#94A3B8" fontSize={11} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '11px' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  <Bar dataKey="referral_count" name="Outbound Referrals" fill="#0F766E" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="gap_count" name="Potential Service Gaps" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-xs text-slate-400">
+                Loading state comparison...
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* States Table */}
+        <div className="card-healthcare p-6 bg-white space-y-4">
+          <h3 className="font-bold text-slate-900 text-sm">
+            State Healthcare Profiles & Administrative Drill-Down ({stateBreakdown.length})
+          </h3>
+
+          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold">
+                  <th className="py-3 px-4">State / UT</th>
+                  <th className="py-3 px-4 text-center">Referral Volume</th>
+                  <th className="py-3 px-4 text-center">Identified Service Gaps</th>
+                  <th className="py-3 px-4">Dominant Missing Resource</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Drill-Down Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {stateBreakdown.map((s, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 font-bold text-slate-900 flex items-center space-x-2">
+                      <Layers className="w-4 h-4 text-teal-700" />
+                      <span>{s.name}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-800">
+                      {s.referral_count}
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-mono font-bold text-red-600">
+                      {s.gap_count}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                        {s.primary_shortage}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          s.status === 'Critical'
+                            ? 'bg-red-100 text-red-800'
+                            : s.status === 'Review'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => navigate('/district-analysis')}
+                        className="inline-flex items-center space-x-1 text-teal-700 hover:text-teal-900 font-bold"
+                      >
+                        <span>Drill-Down to Districts</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
