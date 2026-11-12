@@ -292,3 +292,8 @@ This project is open-source and distributed under the **MIT License**. See the `
 <p align="center">
   <b>Built for strengthening public health infrastructure and patient referral efficiency.</b>
 </p>
+
+<p align="center">
+  <b>Ai has been used to built.</b>
+</p>
+
